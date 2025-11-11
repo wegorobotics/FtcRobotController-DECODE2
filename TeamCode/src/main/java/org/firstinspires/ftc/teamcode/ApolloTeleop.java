@@ -10,10 +10,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.LLStatus;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 /*
  * This file includes a teleop (driver-controlled) file for the goBILDA® StarterBot for the
@@ -30,9 +26,9 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
  * we will also need to adjust the "PIDF" coefficients with some that are a better fit for our application.
  */
 
-@TeleOp(name = "StarterBotTeleop", group = "StarterBot")
+@TeleOp(name = "ApolloTeleop", group = "Apollo")
 //@Disabled
-public class StarterBotTeleop extends OpMode {
+public class ApolloTeleop extends OpMode {
     final double FEED_TIME_SECONDS = 0.15; //The feeder servos run this long when a shot is requested.
     final double STOP_SPEED = 0.0; //We send this power to the servos when we want them to stop.
     final double FULL_SPEED = -1.0;
@@ -44,12 +40,12 @@ public class StarterBotTeleop extends OpMode {
      * at. The minimum velocity is a threshold for determining when to fire.
      */
 
-    final double FAST_LAUNCHER_TARGET_VELOCITY = 1950;
-    final double FAST_LAUNCHER_MIN_VELOCITY = 1940;
-    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1610;
-    final double SLOW_LAUNCHER_MIN_VELOCITY = 1600;
-    double LAUNCHER_TARGET_VELOCITY = 1610;
-    double LAUNCHER_MIN_VELOCITY = 1600;
+    final double FAST_LAUNCHER_TARGET_VELOCITY = 2000;
+    final double FAST_LAUNCHER_MIN_VELOCITY = 1990;
+    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1725;
+    final double SLOW_LAUNCHER_MIN_VELOCITY = 1700;
+    double LAUNCHER_TARGET_VELOCITY = 1725;
+    double LAUNCHER_MIN_VELOCITY = 1700;
 
     // Declare OpMode members.
     private DcMotor fl_Wheel = null;
@@ -60,9 +56,6 @@ public class StarterBotTeleop extends OpMode {
     private DcMotorEx intake_motor = null;
     private CRServo left_servo = null;
     private CRServo right_servo = null;
-    private Limelight3A limelight = null;
-
-
 
     ElapsedTime feederTimer = new ElapsedTime();
 
@@ -115,11 +108,6 @@ public class StarterBotTeleop extends OpMode {
         intake_motor = hardwareMap.get(DcMotorEx.class, "intake_motor");
         left_servo = hardwareMap.get(CRServo.class, "left_servo");
         right_servo = hardwareMap.get(CRServo.class, "right_servo");
-
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        telemetry.setMsTransmissionInterval(11);
-        limelight.pipelineSwitch(0);
-        limelight.start();
 
         /*
          * To drive forward, most robots need the motor on one side to be reversed,
@@ -209,25 +197,6 @@ public class StarterBotTeleop extends OpMode {
          * Here we give the user control of the speed of the launcher motor without automatically
          * queuing a shot.
          */
-
-
-        LLResult result = limelight.getLatestResult();
-        if (result != null && result.isValid()) {
-            double tx = result.getTx(); // How far left or right the target is (degrees)
-            double ty = result.getTy(); // How far up or down the target is (degrees)
-            double ta = result.getTa(); // How big the target looks (0%-100% of the image)
-
-            telemetry.addData("Target X", tx);
-            telemetry.addData("Target Y", ty);
-            telemetry.addData("Target Area", ta);
-        } else {
-            telemetry.addData("Limelight", "No Targets");
-        }
-
-
-
-
-
         if (gamepad2.dpad_up) {
             LAUNCHER_TARGET_VELOCITY = FAST_LAUNCHER_TARGET_VELOCITY;
             LAUNCHER_MIN_VELOCITY = FAST_LAUNCHER_MIN_VELOCITY;
@@ -235,7 +204,6 @@ public class StarterBotTeleop extends OpMode {
             LAUNCHER_TARGET_VELOCITY = SLOW_LAUNCHER_TARGET_VELOCITY;
             LAUNCHER_MIN_VELOCITY = SLOW_LAUNCHER_MIN_VELOCITY;
         }
-
 
         if (gamepad2.b) { // stop flywheel
             launch_motor.setVelocity(STOP_SPEED);

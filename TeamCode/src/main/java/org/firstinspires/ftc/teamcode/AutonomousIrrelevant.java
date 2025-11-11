@@ -2,15 +2,14 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Autonomous
-public class AutonomousPosition extends LinearOpMode {
+public class AutonomousIrrelevant extends LinearOpMode {
     private DcMotorEx fl_Wheel = null;
     private DcMotorEx bl_Wheel = null;
     private DcMotorEx fr_Wheel = null;
@@ -25,6 +24,28 @@ public class AutonomousPosition extends LinearOpMode {
 
     static final double     COUNTS_PER_WHEEL_REV    = COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION;
     static final double     COUNTS_PER_MM           = COUNTS_PER_WHEEL_REV / WHEEL_CIRCUMFERENCE_MM;
+
+    private enum LaunchState {
+        IDLE,
+        SPIN_UP,
+        LAUNCH,
+        LAUNCHING,
+    }
+
+    private LaunchState launchState;
+
+    final double FEED_TIME_SECONDS = 0.15; //The feeder servos run this long when a shot is requested.
+    final double STOP_SPEED = 0.0; //We send this power to the servos when we want them to stop.
+    final double FULL_SPEED = -1.0;
+
+    final double FAST_LAUNCHER_TARGET_VELOCITY = 2000;
+    final double FAST_LAUNCHER_MIN_VELOCITY = 1990;
+    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1475;
+    final double SLOW_LAUNCHER_MIN_VELOCITY = 1450;
+    double LAUNCHER_TARGET_VELOCITY = 2000;
+    double LAUNCHER_MIN_VELOCITY = 1800;
+
+    ElapsedTime feederTimer = new ElapsedTime();
 
     @Override
     public void runOpMode() {
@@ -46,14 +67,17 @@ public class AutonomousPosition extends LinearOpMode {
         fl_Wheel.setDirection(DcMotor.Direction.REVERSE);
         br_Wheel.setDirection(DcMotor.Direction.FORWARD);
         bl_Wheel.setDirection(DcMotor.Direction.REVERSE);
+        launch_motor.setDirection(DcMotor.Direction.REVERSE);
+        left_servo.setDirection(DcMotorSimple.Direction.REVERSE);
+
 
         // moves 2 ft forward
         // for teleops, instead of 610, we'll put inside whileloop and
         // move based on input received from gamepad
-        int flTarget = (int)(610 * COUNTS_PER_MM);
-        int blTarget = (int)(610 * COUNTS_PER_MM);
-        int frTarget = (int)(610 * COUNTS_PER_MM);
-        int brTarget = (int)(610 * COUNTS_PER_MM);
+        int flTarget = (int)(750 * COUNTS_PER_MM);
+        int blTarget = (int)(750 * COUNTS_PER_MM);
+        int frTarget = (int)(750 * COUNTS_PER_MM);
+        int brTarget = (int)(750 * COUNTS_PER_MM);
         double TPS = ((double) 150 / 60) * COUNTS_PER_WHEEL_REV;
 
         waitForStart();
@@ -72,6 +96,43 @@ public class AutonomousPosition extends LinearOpMode {
 
         telemetry.update();
 
+        launchState = LaunchState.IDLE;
+
+        //shoot artifacts
+        right_servo.setPower(FULL_SPEED);
+        left_servo.setPower(FULL_SPEED);
+
+
+        /*
+        launch_motor.setVelocity(LAUNCHER_TARGET_VELOCITY);
+        while (launch_motor.getVelocity() < LAUNCHER_MIN_VELOCITY) {
+            sleep(1);
+        }
+        left_servo.setPower(FULL_SPEED);
+        right_servo.setPower(FULL_SPEED);
+        feederTimer.reset();
+        while (feederTimer.seconds() < FEED_TIME_SECONDS) {
+            sleep(1);
+        }
+        right_servo.setPower(STOP_SPEED);
+        left_servo.setPower(STOP_SPEED);
+        */
+
+
+
+        sleep(5000);
+
+
+
+
+
+        /*
+        launch();
+        sleep(5000);
+
+        launch();
+        sleep(5000);
+        */
 
         fl_Wheel.setTargetPosition(flTarget);
         bl_Wheel.setTargetPosition(blTarget);
@@ -107,5 +168,33 @@ public class AutonomousPosition extends LinearOpMode {
         sleep(5000);
 
         //while (opModeIsActive() && (leftmotor.isBusy() && rightmotor.isBusy())) {
+        }
+
+        void launch() {
+            switch (launchState) {
+                case IDLE:
+                    launchState = LaunchState.SPIN_UP;
+                    break;
+                case SPIN_UP:
+                    launch_motor.setVelocity(LAUNCHER_TARGET_VELOCITY);
+                    if (launch_motor.getVelocity() > LAUNCHER_MIN_VELOCITY) {
+                        launchState = LaunchState.LAUNCH;
+                    }
+                    break;
+                case LAUNCH:
+                    telemetry.addData("made it to servo code?", "yes");
+                    left_servo.setPower(FULL_SPEED);
+                    right_servo.setPower(FULL_SPEED);
+                    feederTimer.reset();
+                    launchState = LaunchState.LAUNCHING;
+                    break;
+                case LAUNCHING:
+                    if (feederTimer.seconds() > FEED_TIME_SECONDS) {
+                        launchState = LaunchState.IDLE;
+                        left_servo.setPower(STOP_SPEED);
+                        right_servo.setPower(STOP_SPEED);
+                    }
+                    break;
+            }
         }
     }
