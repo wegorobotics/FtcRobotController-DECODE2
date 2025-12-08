@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
-
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -10,13 +8,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.IMU;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
-import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 /*
  * This file includes a teleop (driver-controlled) file for the goBILDA® StarterBot for the
@@ -33,12 +26,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
  * we will also need to adjust the "PIDF" coefficients with some that are a better fit for our application.
  */
 
-@TeleOp(name = "StarterBotTeleopFieldCentric", group = "StarterBot")
+@TeleOp(name = "BlueStarterBotTeleop", group = "StarterBot")
 //@Disabled
-public class StarterBotTeleopFieldCentric extends OpMode {
-    final double FEED_TIME_SECONDS = 0.20; //The feeder servos run this long when a shot is requested.
+public class BlueStarterBotTeleop extends OpMode {
+    final double FEED_TIME_SECONDS = 0.25; //The feeder servos run this long when a shot is requested.
     final double STOP_SPEED = 0.0; //We send this power to the servos when we want them to stop.
-    final double FULL_SPEED = 1.0;
+    final double FULL_SPEED = -1.0;
 
     /*
      * When we control our launcher motor, we are using encoders. These allow the control system
@@ -46,8 +39,14 @@ public class StarterBotTeleopFieldCentric extends OpMode {
      * velocity. Here we are setting the target, and minimum velocity that the launcher should run
      * at. The minimum velocity is a threshold for determining when to fire.
      */
-    final double LAUNCHER_TARGET_VELOCITY = 1125;
-    final double LAUNCHER_MIN_VELOCITY = 1075;
+
+    final double FAST_LAUNCHER_TARGET_VELOCITY = 1780;
+    final double FAST_LAUNCHER_MIN_VELOCITY = 1775;
+    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1515;
+    final double SLOW_LAUNCHER_MIN_VELOCITY = 1510;
+    double LAUNCHER_TARGET_VELOCITY = 1515;
+    double LAUNCHER_MIN_VELOCITY = 1510;
+    boolean CLOSE_MODE = true;
 
     // Declare OpMode members.
     private DcMotor fl_Wheel = null;
@@ -55,9 +54,12 @@ public class StarterBotTeleopFieldCentric extends OpMode {
     private DcMotor fr_Wheel = null;
     private DcMotor br_Wheel = null;
     private DcMotorEx launch_motor = null;
+    private DcMotorEx intake_motor = null;
     private CRServo left_servo = null;
     private CRServo right_servo = null;
-    IMU imu;
+    private Limelight3A limelight = null;
+
+
 
     ElapsedTime feederTimer = new ElapsedTime();
 
@@ -107,17 +109,14 @@ public class StarterBotTeleopFieldCentric extends OpMode {
         fr_Wheel = hardwareMap.get(DcMotor.class, "fr_motor");
         br_Wheel = hardwareMap.get(DcMotor.class, "br_motor");
         launch_motor = hardwareMap.get(DcMotorEx.class, "launch_motor");
+        intake_motor = hardwareMap.get(DcMotorEx.class, "intake_motor");
         left_servo = hardwareMap.get(CRServo.class, "left_servo");
         right_servo = hardwareMap.get(CRServo.class, "right_servo");
-        imu = hardwareMap.get(IMU.class, "imu");
 
-        // change to our control hub orientation
-        RevHubOrientationOnRobot.LogoFacingDirection logoDirection = RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
-        RevHubOrientationOnRobot.UsbFacingDirection  usbDirection  = RevHubOrientationOnRobot.UsbFacingDirection.LEFT;
-        RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(logoDirection, usbDirection);
-        imu.initialize(new IMU.Parameters(orientationOnRobot));
-
-        imu.resetYaw();
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        telemetry.setMsTransmissionInterval(11);
+        limelight.pipelineSwitch(0);
+        limelight.start();
 
         /*
          * To drive forward, most robots need the motor on one side to be reversed,
@@ -126,9 +125,9 @@ public class StarterBotTeleopFieldCentric extends OpMode {
          * Note: The settings here assume direct drive on left and right wheels. Gear
          * Reduction or 90 Deg drives may require direction flips
          */
-        fr_Wheel.setDirection(DcMotor.Direction.REVERSE);
-        fl_Wheel.setDirection(DcMotor.Direction.FORWARD);
-        br_Wheel.setDirection(DcMotor.Direction.REVERSE);
+        fr_Wheel.setDirection(DcMotor.Direction.FORWARD);
+        fl_Wheel.setDirection(DcMotor.Direction.REVERSE);
+        br_Wheel.setDirection(DcMotor.Direction.FORWARD);
         bl_Wheel.setDirection(DcMotor.Direction.REVERSE);
 
         /*
@@ -139,6 +138,7 @@ public class StarterBotTeleopFieldCentric extends OpMode {
          * through any wiring.
          */
         launch_motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        launch_motor.setDirection(DcMotor.Direction.REVERSE);
 
         /*
          * Setting zeroPowerBehavior to BRAKE enables a "brake mode". This causes the motor to
@@ -150,6 +150,7 @@ public class StarterBotTeleopFieldCentric extends OpMode {
         br_Wheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         bl_Wheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launch_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        intake_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         /*
          * set Feeders to an initial value to initialize the servo controller
@@ -190,10 +191,6 @@ public class StarterBotTeleopFieldCentric extends OpMode {
      */
     @Override
     public void loop() {
-
-        YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
-        telemetry.addData("Yaw (turn)", orientation.getYaw(AngleUnit.RADIANS));
-
         /*
          * Here we call a function called arcadeDrive. The arcadeDrive function takes the input from
          * the joysticks, and applies power to the left and right drive motor to move the robot
@@ -209,22 +206,111 @@ public class StarterBotTeleopFieldCentric extends OpMode {
          * Here we give the user control of the speed of the launcher motor without automatically
          * queuing a shot.
          */
-        if (gamepad1.y) {
-            launch_motor.setVelocity(LAUNCHER_TARGET_VELOCITY);
-        } else if (gamepad1.b) { // stop flywheel
+
+
+        if (gamepad2.dpad_down || gamepad1.dpad_down) {
+            LAUNCHER_TARGET_VELOCITY = SLOW_LAUNCHER_TARGET_VELOCITY;
+            LAUNCHER_MIN_VELOCITY = SLOW_LAUNCHER_MIN_VELOCITY;
+            CLOSE_MODE = true;
+        }
+        if (gamepad2.dpad_up || gamepad1.dpad_up) {
+            LAUNCHER_TARGET_VELOCITY = FAST_LAUNCHER_TARGET_VELOCITY;
+            LAUNCHER_MIN_VELOCITY = FAST_LAUNCHER_MIN_VELOCITY;
+            CLOSE_MODE = false;
+        }
+
+
+
+
+        LLResult result = limelight.getLatestResult();
+        if (result != null && result.isValid()) {
+            double tx = result.getTx(); // How far left or right the target is (degrees)
+            double ty = result.getTy(); // How far up or down the target is (degrees)
+            double ta = result.getTa(); // How big the target looks (0%-100% of the image)
+
+            telemetry.addData("Target X", tx);
+            telemetry.addData("Target Y", ty);
+            telemetry.addData("Target Area", ta);
+        } else {
+            telemetry.addData("Limelight", "No Targets");
+        }
+
+        double ty = result.getTy();
+        double tx = result.getTx();
+        double limelight_turn = 0;
+        double limelight_move = 0;
+
+
+
+        if (CLOSE_MODE == true) {
+            if (gamepad1.y) {
+                if (ty > 11.07) {
+                    limelight_move = 0.15;
+                } else if (ty < 11.07) {
+                    limelight_move = -0.15;
+                }
+            }
+            if (gamepad1.x) {
+                if (tx > -4.71) {
+                    limelight_turn = 0.25;
+                } else if (tx < -4.71) {
+                    limelight_turn = -0.25;
+                }
+            }
+        } else if (CLOSE_MODE == false) {
+            if (gamepad1.y) {
+                if (ty > 4.10) {
+                    limelight_move = 0.15;
+                } else if (ty < 4.10) {
+                    limelight_move = -0.15;
+                }
+            }
+            if (gamepad1.x) {
+                if (tx > -1.44) {
+                    limelight_turn = 0.25;
+                } else if (tx < -1.44) {
+                    limelight_turn = -0.25;
+                }
+            }
+        }
+
+        telemetry.addData("CLOSE MODE", CLOSE_MODE);
+
+
+
+
+
+
+
+
+        if (gamepad2.b || gamepad1.b) { // stop flywheel
             launch_motor.setVelocity(STOP_SPEED);
+        }
+        if (gamepad2.a || gamepad1.a) { // stop intake motor
+            intake_motor.setVelocity(STOP_SPEED);
+        }
+
+        double launch_Position = launch_motor.getCurrentPosition();
+        telemetry.addData("launchmotor", launch_Position);
+
+        // test running intake motor
+        if(gamepad2.y) { // out
+            intake_motor.setPower(0.5);
+        }
+        if(gamepad2.x) { // in
+            intake_motor.setPower(-0.5);
         }
 
         /*
          * Now we call our "Launch" function.
          */
-        launch(gamepad1.rightBumperWasPressed());
 
+        launch(gamepad2.rightBumperWasPressed() || gamepad1.rightBumperWasPressed());
 
         // wheel movement
         double left_x = gamepad1.left_stick_x;
-        double left_y = gamepad1.left_stick_y;
-        double joystick_turn = gamepad1.right_stick_x;
+        double left_y = gamepad1.left_stick_y + limelight_move;
+        double joystick_turn = gamepad1.right_stick_x + limelight_turn;
         if (gamepad1.left_stick_button) {
             left_x = (gamepad1.left_stick_x / 2);
             left_y = (gamepad1.left_stick_y / 2);
@@ -233,7 +319,7 @@ public class StarterBotTeleopFieldCentric extends OpMode {
             joystick_turn = (gamepad1.right_stick_x / 2);
         }
 
-        double joystick_direction = -1 * Math.atan2(left_y, left_x) - orientation.getYaw(AngleUnit.RADIANS);
+        double joystick_direction = (-1 * Math.atan2(left_y, left_x)) + (Math.PI / 2);
         double joystick_magnitude = Math.sqrt((left_x * left_x) + (left_y * left_y));
 
         double left_x2 = gamepad2.left_stick_x / 2;
@@ -247,16 +333,17 @@ public class StarterBotTeleopFieldCentric extends OpMode {
         fl_Wheel.setPower(1 * Math.sin((joystick_direction + joystick_direction2) - (0.25 * Math.PI)) * (joystick_magnitude + joystick_magnitude2) + (joystick_turn + joystick_turn2) / 2);
         bl_Wheel.setPower(-1 * Math.sin((joystick_direction + joystick_direction2) + (0.25 * Math.PI)) * (joystick_magnitude + joystick_magnitude2) + (joystick_turn + joystick_turn2) / 2);
 
-
-
         /*
          * Show the state and motor powers
          */
+
         telemetry.addData("State", launchState);
         telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
         telemetry.addData("motorSpeed", launch_motor.getVelocity());
+        telemetry.addData("did the code push? ", "yes!");
 
         telemetry.update();
+
     }
 
     /*
@@ -290,6 +377,7 @@ public class StarterBotTeleopFieldCentric extends OpMode {
                 }
                 break;
             case LAUNCH:
+                telemetry.addData("made it to servo code?", "yes");
                 left_servo.setPower(FULL_SPEED);
                 right_servo.setPower(FULL_SPEED);
                 feederTimer.reset();
@@ -303,5 +391,6 @@ public class StarterBotTeleopFieldCentric extends OpMode {
                 }
                 break;
         }
+        //telemetry.update();
     }
 }

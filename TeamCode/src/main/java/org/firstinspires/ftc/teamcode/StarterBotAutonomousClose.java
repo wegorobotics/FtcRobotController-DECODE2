@@ -32,8 +32,6 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -62,9 +60,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  * main robot "loop," continuously checking for conditions that allow us to move to the next step.
  */
 
-@Autonomous(name="StarterBotAutonomous", group="StarterBot")
+@Autonomous(name="StarterBotAutonomousClose", group="StarterBot")
 //@Disabled
-public class StarterBotAutonomous extends OpMode
+public class StarterBotAutonomousClose extends OpMode
 {
 
     final double FEED_TIME = 0.20; //The feeder servos run this long when a shot is requested.
@@ -75,8 +73,8 @@ public class StarterBotAutonomous extends OpMode
      * velocity. Here we are setting the target and minimum velocity that the launcher should run
      * at. The minimum velocity is a threshold for determining when to fire.
      */
-    final double LAUNCHER_TARGET_VELOCITY = 1725;
-    final double LAUNCHER_MIN_VELOCITY = 1700;
+    final double LAUNCHER_TARGET_VELOCITY = 1505;
+    final double LAUNCHER_MIN_VELOCITY = 1500;
 
     /*
      * The number of seconds that we wait between each of our 3 shots from the launcher. This
@@ -152,9 +150,9 @@ public class StarterBotAutonomous extends OpMode
      * Here is our auto state machine enum. This captures each action we'd like to do in auto.
      */
     private enum AutonomousState {
+        DRIVING_AWAY_FROM_GOAL,
         LAUNCH,
         WAIT_FOR_LAUNCH,
-        DRIVING_AWAY_FROM_GOAL,
         ROTATING,
         DRIVING_OFF_LINE,
         COMPLETE;
@@ -185,7 +183,7 @@ public class StarterBotAutonomous extends OpMode
          * Later in our code, we will progress through the state machine by moving to other enum members.
          * We do the same for our launcher state machine, setting it to IDLE before we use it later.
          */
-        autonomousState = AutonomousState.LAUNCH;
+        autonomousState = AutonomousState.DRIVING_AWAY_FROM_GOAL;
         launchState = LaunchState.IDLE;
 
 
@@ -319,6 +317,22 @@ public class StarterBotAutonomous extends OpMode
              * "false" condition means that we are continuing to call the function every loop,
              * allowing it to cycle through and continue the process of launching the first ball.
              */
+
+            case DRIVING_AWAY_FROM_GOAL:
+                /*
+                 * This is another function that returns a boolean. This time we return "true" if
+                 * the robot has been within a tolerance of the target position for "holdSeconds."
+                 * Once the function returns "true" we reset the encoders again and move on.
+                 */
+                if(drive(DRIVE_SPEED, -55, DistanceUnit.INCH, 1)){
+                    fr_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    fl_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    br_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    bl_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    autonomousState = AutonomousState.LAUNCH;
+                }
+                break;
+
             case LAUNCH:
                 launch(true);
                 autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
@@ -336,6 +350,7 @@ public class StarterBotAutonomous extends OpMode
                  * state on our state machine. Otherwise, we reset the encoders on our drive motors
                  * and move onto the next state.
                  */
+
                 if(launch(false)) {
                     shotsToFire -= 1;
                     if(shotsToFire > 0) {
@@ -346,31 +361,16 @@ public class StarterBotAutonomous extends OpMode
                         br_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         bl_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         launch_motor.setVelocity(0);
-                        autonomousState = AutonomousState.DRIVING_AWAY_FROM_GOAL;
+                        autonomousState = AutonomousState.ROTATING;
                     }
-                }
-                break;
-
-            case DRIVING_AWAY_FROM_GOAL:
-                /*
-                 * This is another function that returns a boolean. This time we return "true" if
-                 * the robot has been within a tolerance of the target position for "holdSeconds."
-                 * Once the function returns "true" we reset the encoders again and move on.
-                 */
-                if(drive(DRIVE_SPEED, -4, DistanceUnit.INCH, 1)){
-                    fr_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    fl_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    br_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    bl_Wheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    autonomousState = AutonomousState.ROTATING;
                 }
                 break;
 
             case ROTATING:
                 if(alliance == Alliance.RED){
-                    robotRotationAngle = 45;
+                    robotRotationAngle = 80;
                 } else if (alliance == Alliance.BLUE){
-                    robotRotationAngle = -45;
+                    robotRotationAngle = -80;
                 }
 
                 if(rotate(ROTATE_SPEED, robotRotationAngle, AngleUnit.DEGREES,1)){
@@ -556,6 +556,7 @@ public class StarterBotAutonomous extends OpMode
         return (driveTimer.seconds() > holdSeconds);
     }
 }
+
 
 
 

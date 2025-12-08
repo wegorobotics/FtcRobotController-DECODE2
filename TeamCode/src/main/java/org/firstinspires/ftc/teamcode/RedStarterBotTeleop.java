@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
-import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
-
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -10,10 +10,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.LLStatus;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 /*
  * This file includes a teleop (driver-controlled) file for the goBILDA® StarterBot for the
@@ -30,10 +26,10 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
  * we will also need to adjust the "PIDF" coefficients with some that are a better fit for our application.
  */
 
-@TeleOp(name = "StarterBotTeleop", group = "StarterBot")
+@TeleOp(name = "RedStarterBotTeleop", group = "StarterBot")
 //@Disabled
-public class StarterBotTeleop extends OpMode {
-    final double FEED_TIME_SECONDS = 0.15; //The feeder servos run this long when a shot is requested.
+public class RedStarterBotTeleop extends OpMode {
+    final double FEED_TIME_SECONDS = 0.25; //The feeder servos run this long when a shot is requested.
     final double STOP_SPEED = 0.0; //We send this power to the servos when we want them to stop.
     final double FULL_SPEED = -1.0;
 
@@ -44,12 +40,13 @@ public class StarterBotTeleop extends OpMode {
      * at. The minimum velocity is a threshold for determining when to fire.
      */
 
-    final double FAST_LAUNCHER_TARGET_VELOCITY = 1950;
-    final double FAST_LAUNCHER_MIN_VELOCITY = 1940;
-    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1610;
-    final double SLOW_LAUNCHER_MIN_VELOCITY = 1600;
-    double LAUNCHER_TARGET_VELOCITY = 1610;
-    double LAUNCHER_MIN_VELOCITY = 1600;
+    final double FAST_LAUNCHER_TARGET_VELOCITY = 1780;
+    final double FAST_LAUNCHER_MIN_VELOCITY = 1775;
+    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1515;
+    final double SLOW_LAUNCHER_MIN_VELOCITY = 1510;
+    double LAUNCHER_TARGET_VELOCITY = 1515;
+    double LAUNCHER_MIN_VELOCITY = 1510;
+    boolean CLOSE_MODE = true;
 
     // Declare OpMode members.
     private DcMotor fl_Wheel = null;
@@ -118,7 +115,7 @@ public class StarterBotTeleop extends OpMode {
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         telemetry.setMsTransmissionInterval(11);
-        limelight.pipelineSwitch(0);
+        limelight.pipelineSwitch(1);
         limelight.start();
 
         /*
@@ -211,6 +208,20 @@ public class StarterBotTeleop extends OpMode {
          */
 
 
+        if (gamepad2.dpad_down || gamepad1.dpad_down) {
+            LAUNCHER_TARGET_VELOCITY = SLOW_LAUNCHER_TARGET_VELOCITY;
+            LAUNCHER_MIN_VELOCITY = SLOW_LAUNCHER_MIN_VELOCITY;
+            CLOSE_MODE = true;
+        }
+        if (gamepad2.dpad_up || gamepad1.dpad_up) {
+            LAUNCHER_TARGET_VELOCITY = FAST_LAUNCHER_TARGET_VELOCITY;
+            LAUNCHER_MIN_VELOCITY = FAST_LAUNCHER_MIN_VELOCITY;
+            CLOSE_MODE = false;
+        }
+
+
+
+
         LLResult result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
             double tx = result.getTx(); // How far left or right the target is (degrees)
@@ -224,23 +235,58 @@ public class StarterBotTeleop extends OpMode {
             telemetry.addData("Limelight", "No Targets");
         }
 
+        double ty = result.getTy();
+        double tx = result.getTx();
+        double limelight_turn = 0;
+        double limelight_move = 0;
 
 
 
-
-        if (gamepad2.dpad_up) {
-            LAUNCHER_TARGET_VELOCITY = FAST_LAUNCHER_TARGET_VELOCITY;
-            LAUNCHER_MIN_VELOCITY = FAST_LAUNCHER_MIN_VELOCITY;
-        } else if (gamepad2.dpad_down) {
-            LAUNCHER_TARGET_VELOCITY = SLOW_LAUNCHER_TARGET_VELOCITY;
-            LAUNCHER_MIN_VELOCITY = SLOW_LAUNCHER_MIN_VELOCITY;
+        if (CLOSE_MODE == true) {
+            if (gamepad1.y) {
+                if (ty > 10.61) {
+                    limelight_move = 0.15;
+                } else if (ty < 10.61) {
+                    limelight_move = -0.15;
+                }
+            }
+            if (gamepad1.x) {
+                if (tx > -7.49) {
+                    limelight_turn = 0.25;
+                } else if (tx < -7.49) {
+                    limelight_turn = -0.25;
+                }
+            }
+        } else if (CLOSE_MODE == false) {
+            if (gamepad1.y) {
+                if (ty > 4.13) {
+                    limelight_move = 0.15;
+                } else if (ty < 4.13) {
+                    limelight_move = -0.15;
+                }
+            }
+            if (gamepad1.x) {
+                if (tx > -6.01) {
+                    limelight_turn = 0.25;
+                } else if (tx < -6.01) {
+                    limelight_turn = -0.25;
+                }
+            }
         }
 
+        telemetry.addData("CLOSE MODE", CLOSE_MODE);
 
-        if (gamepad2.b) { // stop flywheel
+
+
+
+
+
+
+
+        if (gamepad2.b || gamepad1.b) { // stop flywheel
             launch_motor.setVelocity(STOP_SPEED);
         }
-        if (gamepad2.a) { // stop intake motor
+        if (gamepad2.a || gamepad1.a) { // stop intake motor
             intake_motor.setVelocity(STOP_SPEED);
         }
 
@@ -259,12 +305,12 @@ public class StarterBotTeleop extends OpMode {
          * Now we call our "Launch" function.
          */
 
-        launch(gamepad2.rightBumperWasPressed());
+        launch(gamepad2.rightBumperWasPressed() || gamepad1.rightBumperWasPressed());
 
         // wheel movement
         double left_x = gamepad1.left_stick_x;
-        double left_y = gamepad1.left_stick_y;
-        double joystick_turn = gamepad1.right_stick_x;
+        double left_y = gamepad1.left_stick_y + limelight_move;
+        double joystick_turn = gamepad1.right_stick_x + limelight_turn;
         if (gamepad1.left_stick_button) {
             left_x = (gamepad1.left_stick_x / 2);
             left_y = (gamepad1.left_stick_y / 2);
