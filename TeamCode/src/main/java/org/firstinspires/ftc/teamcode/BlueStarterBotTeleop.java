@@ -29,7 +29,7 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 @TeleOp(name = "BlueStarterBotTeleop", group = "StarterBot")
 //@Disabled
 public class BlueStarterBotTeleop extends OpMode {
-    final double FEED_TIME_SECONDS = 0.25; //The feeder servos run this long when a shot is requested.
+    final double FEED_TIME_SECONDS = 0.22; //The feeder servos run this long when a shot is requested.
     final double STOP_SPEED = 0.0; //We send this power to the servos when we want them to stop.
     final double FULL_SPEED = -1.0;
 
@@ -40,11 +40,11 @@ public class BlueStarterBotTeleop extends OpMode {
      * at. The minimum velocity is a threshold for determining when to fire.
      */
 
-    final double FAST_LAUNCHER_TARGET_VELOCITY = 1780;
+    final double FAST_LAUNCHER_TARGET_VELOCITY = 1785;
     final double FAST_LAUNCHER_MIN_VELOCITY = 1775;
-    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1515;
+    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1520;
     final double SLOW_LAUNCHER_MIN_VELOCITY = 1510;
-    double LAUNCHER_TARGET_VELOCITY = 1515;
+    double LAUNCHER_TARGET_VELOCITY = 1520;
     double LAUNCHER_MIN_VELOCITY = 1510;
     boolean CLOSE_MODE = true;
 
