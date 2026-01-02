@@ -259,16 +259,16 @@ public class BlueStarterBotTeleop extends OpMode {
             }
         } else if (CLOSE_MODE == false) {
             if (gamepad1.y) {
-                if (ty > 4.10) {
+                if (ty > 3.82) {
                     limelight_move = 0.15;
-                } else if (ty < 4.10) {
+                } else if (ty < 3.82) {
                     limelight_move = -0.15;
                 }
             }
             if (gamepad1.x) {
-                if (tx > -1.44) {
+                if (tx > -4.46) {
                     limelight_turn = 0.25;
-                } else if (tx < -1.44) {
+                } else if (tx < -4.46) {
                     limelight_turn = -0.25;
                 }
             }
@@ -285,9 +285,11 @@ public class BlueStarterBotTeleop extends OpMode {
 
         if (gamepad2.b || gamepad1.b) { // stop flywheel
             launch_motor.setVelocity(STOP_SPEED);
+            launchState = LaunchState.IDLE;
         }
         if (gamepad2.a || gamepad1.a) { // stop intake motor
             intake_motor.setVelocity(STOP_SPEED);
+            launchState = LaunchState.IDLE;
         }
 
         double launch_Position = launch_motor.getCurrentPosition();

@@ -42,8 +42,8 @@ public class RedStarterBotTeleop extends OpMode {
 
     final double FAST_LAUNCHER_TARGET_VELOCITY = 1785;
     final double FAST_LAUNCHER_MIN_VELOCITY = 1775;
-    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1520;
-    final double SLOW_LAUNCHER_MIN_VELOCITY = 1510;
+    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1410;
+    final double SLOW_LAUNCHER_MIN_VELOCITY = 1400;
     double LAUNCHER_TARGET_VELOCITY = 1520;
     double LAUNCHER_MIN_VELOCITY = 1510;
     boolean CLOSE_MODE = true;
@@ -251,24 +251,24 @@ public class RedStarterBotTeleop extends OpMode {
                 }
             }
             if (gamepad1.x) {
-                if (tx > -7.49) {
+                if (tx > -5.44) {
                     limelight_turn = 0.25;
-                } else if (tx < -7.49) {
+                } else if (tx < -5.44) {
                     limelight_turn = -0.25;
                 }
             }
         } else if (CLOSE_MODE == false) {
             if (gamepad1.y) {
-                if (ty > 4.13) {
+                if (ty > 4.26) {
                     limelight_move = 0.15;
-                } else if (ty < 4.13) {
+                } else if (ty < 4.26) {
                     limelight_move = -0.15;
                 }
             }
             if (gamepad1.x) {
-                if (tx > -6.01) {
+                if (tx > -4.54) {
                     limelight_turn = 0.25;
-                } else if (tx < -6.01) {
+                } else if (tx < -4.54) {
                     limelight_turn = -0.25;
                 }
             }
@@ -285,9 +285,11 @@ public class RedStarterBotTeleop extends OpMode {
 
         if (gamepad2.b || gamepad1.b) { // stop flywheel
             launch_motor.setVelocity(STOP_SPEED);
+            launchState = LaunchState.IDLE;
         }
         if (gamepad2.a || gamepad1.a) { // stop intake motor
             intake_motor.setVelocity(STOP_SPEED);
+            launchState = LaunchState.IDLE;
         }
 
         double launch_Position = launch_motor.getCurrentPosition();
