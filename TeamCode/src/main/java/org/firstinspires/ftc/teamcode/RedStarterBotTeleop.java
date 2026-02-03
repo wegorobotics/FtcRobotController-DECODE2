@@ -29,7 +29,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @TeleOp(name = "RedStarterBotTeleop", group = "StarterBot")
 //@Disabled
 public class RedStarterBotTeleop extends OpMode {
-    final double FEED_TIME_SECONDS = 0.22; //The feeder servos run this long when a shot is requested.
+    final double FEED_TIME_SECONDS = 0.5; //The feeder servos run this long when a shot is requested.
     final double STOP_SPEED = 0.0; //We send this power to the servos when we want them to stop.
     final double FULL_SPEED = -1.0;
 
@@ -40,13 +40,21 @@ public class RedStarterBotTeleop extends OpMode {
      * at. The minimum velocity is a threshold for determining when to fire.
      */
 
+    final double FAST_LAUNCHER_TARGET_VELOCITY = 2060;
+    final double FAST_LAUNCHER_MIN_VELOCITY = 2050;
+    final double SLOW_LAUNCHER_TARGET_VELOCITY = 1785;
+    final double SLOW_LAUNCHER_MIN_VELOCITY = 1775;
+    double LAUNCHER_TARGET_VELOCITY = 1785;
+    double LAUNCHER_MIN_VELOCITY = 1775;
+    boolean CLOSE_MODE = true;
+    /*
     final double FAST_LAUNCHER_TARGET_VELOCITY = 1785;
     final double FAST_LAUNCHER_MIN_VELOCITY = 1775;
     final double SLOW_LAUNCHER_TARGET_VELOCITY = 1410;
     final double SLOW_LAUNCHER_MIN_VELOCITY = 1400;
     double LAUNCHER_TARGET_VELOCITY = 1520;
     double LAUNCHER_MIN_VELOCITY = 1510;
-    boolean CLOSE_MODE = true;
+    */
 
     // Declare OpMode members.
     private DcMotor fl_Wheel = null;
@@ -54,7 +62,7 @@ public class RedStarterBotTeleop extends OpMode {
     private DcMotor fr_Wheel = null;
     private DcMotor br_Wheel = null;
     private DcMotorEx launch_motor = null;
-    private DcMotorEx intake_motor = null;
+    //private DcMotorEx intake_motor = null;
     private CRServo left_servo = null;
     private CRServo right_servo = null;
     private Limelight3A limelight = null;
@@ -81,6 +89,8 @@ public class RedStarterBotTeleop extends OpMode {
      */
     private enum LaunchState {
         IDLE,
+        REVERSE,
+        REVERSE2,
         SPIN_UP,
         LAUNCH,
         LAUNCHING,
@@ -109,7 +119,7 @@ public class RedStarterBotTeleop extends OpMode {
         fr_Wheel = hardwareMap.get(DcMotor.class, "fr_motor");
         br_Wheel = hardwareMap.get(DcMotor.class, "br_motor");
         launch_motor = hardwareMap.get(DcMotorEx.class, "launch_motor");
-        intake_motor = hardwareMap.get(DcMotorEx.class, "intake_motor");
+        //intake_motor = hardwareMap.get(DcMotorEx.class, "intake_motor");
         left_servo = hardwareMap.get(CRServo.class, "left_servo");
         right_servo = hardwareMap.get(CRServo.class, "right_servo");
 
@@ -150,7 +160,7 @@ public class RedStarterBotTeleop extends OpMode {
         br_Wheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         bl_Wheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launch_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        intake_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        //intake_motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         /*
          * set Feeders to an initial value to initialize the servo controller
@@ -244,31 +254,31 @@ public class RedStarterBotTeleop extends OpMode {
 
         if (CLOSE_MODE == true) {
             if (gamepad1.y) {
-                if (ty > 10.61) {
+                if (ty > 10.82) {
                     limelight_move = 0.15;
-                } else if (ty < 10.61) {
+                } else if (ty < 10.82) {
                     limelight_move = -0.15;
                 }
             }
             if (gamepad1.x) {
-                if (tx > -5.44) {
+                if (tx > -3.58) {
                     limelight_turn = 0.25;
-                } else if (tx < -5.44) {
+                } else if (tx < -3.58) {
                     limelight_turn = -0.25;
                 }
             }
         } else if (CLOSE_MODE == false) {
             if (gamepad1.y) {
-                if (ty > 4.26) {
+                if (ty > 4.29) {
                     limelight_move = 0.15;
-                } else if (ty < 4.26) {
+                } else if (ty < 4.29) {
                     limelight_move = -0.15;
                 }
             }
             if (gamepad1.x) {
-                if (tx > -4.54) {
+                if (tx > -2.63) {
                     limelight_turn = 0.25;
-                } else if (tx < -4.54) {
+                } else if (tx < -2.63) {
                     limelight_turn = -0.25;
                 }
             }
@@ -285,16 +295,24 @@ public class RedStarterBotTeleop extends OpMode {
 
         if (gamepad2.b || gamepad1.b) { // stop flywheel
             launch_motor.setVelocity(STOP_SPEED);
+            right_servo.setPower(STOP_SPEED);
+            left_servo.setPower(STOP_SPEED);
             launchState = LaunchState.IDLE;
         }
+
+        /*
         if (gamepad2.a || gamepad1.a) { // stop intake motor
             intake_motor.setVelocity(STOP_SPEED);
             launchState = LaunchState.IDLE;
         }
 
+         */
+
         double launch_Position = launch_motor.getCurrentPosition();
         telemetry.addData("launchmotor", launch_Position);
 
+
+        /*
         // test running intake motor
         if(gamepad2.y) { // out
             intake_motor.setPower(0.5);
@@ -302,6 +320,8 @@ public class RedStarterBotTeleop extends OpMode {
         if(gamepad2.x) { // in
             intake_motor.setPower(-0.5);
         }
+
+         */
 
         /*
          * Now we call our "Launch" function.
@@ -370,6 +390,24 @@ public class RedStarterBotTeleop extends OpMode {
             case IDLE:
                 if (shotRequested) {
                     launchState = LaunchState.SPIN_UP;
+                }
+                if (gamepad2.a) {
+                    launchState = LaunchState.REVERSE;
+                }
+                break;
+            case REVERSE:
+                left_servo.setPower(-1 * FULL_SPEED);
+                right_servo.setPower(-1 * FULL_SPEED);
+                launch_motor.setVelocity(-100);
+                feederTimer.reset();
+                launchState = LaunchState.REVERSE2;
+                break;
+            case REVERSE2:
+                if (feederTimer.seconds() > 1) {
+                    left_servo.setPower(STOP_SPEED);
+                    right_servo.setPower(STOP_SPEED);
+                    launch_motor.setVelocity(STOP_SPEED);
+                    launchState = LaunchState.IDLE;
                 }
                 break;
             case SPIN_UP:
